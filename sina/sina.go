@@ -1,4 +1,4 @@
-package mock
+package sina
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	stats "github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,26 +37,26 @@ const (
 // See: https://github.com/virtual-kubelet/virtual-kubelet/issues/632
 /*
 var (
-	_ providers.Provider           = (*MockV0Provider)(nil)
-	_ providers.PodMetricsProvider = (*MockV0Provider)(nil)
-	_ node.PodNotifier         = (*MockProvider)(nil)
+	_ providers.Provider           = (*SinaV0Provider)(nil)
+	_ providers.PodMetricsProvider = (*SinaV0Provider)(nil)
+	_ node.PodNotifier         = (*SinaProvider)(nil)
 )
 */
 
-// MockProvider implements the virtual-kubelet provider interface and stores pods in memory.
-type MockProvider struct { //nolint:golint
+// SinaProvider implements the virtual-kubelet provider interface and stores pods in memory.
+type SinaProvider struct { //nolint:golint
 	nodeName           string
 	operatingSystem    string
 	internalIP         string
 	daemonEndpointPort int32
 	pods               map[string]*v1.Pod
-	config             MockConfig
+	config             SinaConfig
 	startTime          time.Time
 	notifier           func(*v1.Pod)
 }
 
-// MockConfig contains a mock virtual-kubelet's configurable parameters.
-type MockConfig struct { //nolint:golint
+// SinaConfig contains a Sina virtual-kubelet's configurable parameters.
+type SinaConfig struct { //nolint:golint
 	CPU        string            `json:"cpu,omitempty"`
 	Memory     string            `json:"memory,omitempty"`
 	Pods       string            `json:"pods,omitempty"`
@@ -63,8 +64,8 @@ type MockConfig struct { //nolint:golint
 	ProviderID string            `json:"providerID,omitempty"`
 }
 
-// NewMockProviderMockConfig creates a new MockV0Provider. Mock legacy provider does not implement the new asynchronous podnotifier interface
-func NewMockProviderMockConfig(config MockConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
+// NewSinaProviderSinaConfig creates a new SinaV0Provider. Sina legacy provider does not implement the new asynchronous podnotifier interface
+func NewSinaProviderSinaConfig(config SinaConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*SinaProvider, error) {
 	// set defaults
 	if config.CPU == "" {
 		config.CPU = defaultCPUCapacity
@@ -75,7 +76,7 @@ func NewMockProviderMockConfig(config MockConfig, nodeName, operatingSystem stri
 	if config.Pods == "" {
 		config.Pods = defaultPodCapacity
 	}
-	provider := MockProvider{
+	provider := SinaProvider{
 		nodeName:           nodeName,
 		operatingSystem:    operatingSystem,
 		internalIP:         internalIP,
@@ -88,24 +89,23 @@ func NewMockProviderMockConfig(config MockConfig, nodeName, operatingSystem stri
 	return &provider, nil
 }
 
-// NewMockProvider creates a new MockProvider, which implements the PodNotifier interface
-func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
+// NewSinaProvider creates a new SinaProvider, which implements the PodNotifier interface
+func NewSinaProvider(providerConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*SinaProvider, error) {
 	config, err := loadConfig(providerConfig, nodeName)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewMockProviderMockConfig(config, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+	return NewSinaProviderSinaConfig(config, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 }
 
 // loadConfig loads the given json configuration files.
-func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) {
+func loadConfig(providerConfig, nodeName string) (config SinaConfig, err error) {
 	data, err := os.ReadFile(providerConfig)
 	if err != nil {
 		return config, err
 	}
-	configMap := map[string]MockConfig{}
-	fmt.Println("config data: ", string(data))
+	configMap := map[string]SinaConfig{}
 	err = json.Unmarshal(data, &configMap)
 	if err != nil {
 		return config, err
@@ -141,7 +141,7 @@ func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) 
 }
 
 // CreatePod accepts a Pod definition and stores it in memory.
-func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
+func (p *SinaProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "CreatePod")
 	defer span.End()
 
@@ -198,7 +198,7 @@ func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 }
 
 // UpdatePod accepts a Pod definition and updates its reference.
-func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+func (p *SinaProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "UpdatePod")
 	defer span.End()
 
@@ -219,7 +219,7 @@ func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 }
 
 // DeletePod deletes the specified pod out of memory.
-func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
+func (p *SinaProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	ctx, span := trace.StartSpan(ctx, "DeletePod")
 	defer span.End()
 
@@ -240,15 +240,15 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	now := metav1.Now()
 	delete(p.pods, key)
 	pod.Status.Phase = v1.PodSucceeded
-	pod.Status.Reason = "MockProviderPodDeleted"
+	pod.Status.Reason = "SinaProviderPodDeleted"
 
 	for idx := range pod.Status.ContainerStatuses {
 		pod.Status.ContainerStatuses[idx].Ready = false
 		pod.Status.ContainerStatuses[idx].State = v1.ContainerState{
 			Terminated: &v1.ContainerStateTerminated{
-				Message:    "Mock provider terminated container upon deletion",
+				Message:    "Sina provider terminated container upon deletion",
 				FinishedAt: now,
-				Reason:     "MockProviderPodContainerDeleted",
+				Reason:     "SinaProviderPodContainerDeleted",
 				StartedAt:  pod.Status.ContainerStatuses[idx].State.Running.StartedAt,
 			},
 		}
@@ -260,7 +260,7 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 }
 
 // GetPod returns a pod by name that is stored in memory.
-func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
+func (p *SinaProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	ctx, span := trace.StartSpan(ctx, "GetPod")
 	defer func() {
 		span.SetStatus(err)
@@ -284,7 +284,7 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *SinaProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	ctx, span := trace.StartSpan(ctx, "GetContainerLogs")
 	defer span.End()
 
@@ -297,27 +297,27 @@ func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName,
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *MockProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
+func (p *SinaProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	log.G(context.TODO()).Infof("receive ExecInContainer %q", container)
 	return nil
 }
 
 // AttachToContainer attaches to the executing process of a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *MockProvider) AttachToContainer(ctx context.Context, namespace, name, container string, attach api.AttachIO) error {
+func (p *SinaProvider) AttachToContainer(ctx context.Context, namespace, name, container string, attach api.AttachIO) error {
 	log.G(ctx).Infof("receive AttachToContainer %q", container)
 	return nil
 }
 
 // PortForward forwards a local port to a port on the pod
-func (p *MockProvider) PortForward(ctx context.Context, namespace, pod string, port int32, stream io.ReadWriteCloser) error {
+func (p *SinaProvider) PortForward(ctx context.Context, namespace, pod string, port int32, stream io.ReadWriteCloser) error {
 	log.G(ctx).Infof("receive PortForward %q", pod)
 	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
-func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+func (p *SinaProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	ctx, span := trace.StartSpan(ctx, "GetPodStatus")
 	defer span.End()
 
@@ -335,7 +335,7 @@ func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 }
 
 // GetPods returns a list of all pods known to be "running".
-func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
+func (p *SinaProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	ctx, span := trace.StartSpan(ctx, "GetPods")
 	defer span.End()
 
@@ -350,8 +350,8 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	return pods, nil
 }
 
-func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) { //nolint:golint
-	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") //nolint:staticcheck,ineffassign
+func (p *SinaProvider) ConfigureNode(ctx context.Context, n *v1.Node) { //nolint:golint
+	ctx, span := trace.StartSpan(ctx, "Sina.ConfigureNode") //nolint:staticcheck,ineffassign
 	defer span.End()
 
 	if p.config.ProviderID != "" {
@@ -373,7 +373,7 @@ func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) { //nolint
 }
 
 // Capacity returns a resource list containing the capacity limits.
-func (p *MockProvider) capacity() v1.ResourceList {
+func (p *SinaProvider) capacity() v1.ResourceList {
 	rl := v1.ResourceList{
 		"cpu":    resource.MustParse(p.config.CPU),
 		"memory": resource.MustParse(p.config.Memory),
@@ -387,7 +387,7 @@ func (p *MockProvider) capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *MockProvider) nodeConditions() []v1.NodeCondition {
+func (p *SinaProvider) nodeConditions() []v1.NodeCondition {
 	// TODO: Make this configurable
 	return []v1.NodeCondition{
 		{
@@ -436,7 +436,7 @@ func (p *MockProvider) nodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *MockProvider) nodeAddresses() []v1.NodeAddress {
+func (p *SinaProvider) nodeAddresses() []v1.NodeAddress {
 	return []v1.NodeAddress{
 		{
 			Type:    "InternalIP",
@@ -447,7 +447,7 @@ func (p *MockProvider) nodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *MockProvider) nodeDaemonEndpoints() v1.NodeDaemonEndpoints {
+func (p *SinaProvider) nodeDaemonEndpoints() v1.NodeDaemonEndpoints {
 	return v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,
@@ -456,7 +456,7 @@ func (p *MockProvider) nodeDaemonEndpoints() v1.NodeDaemonEndpoints {
 }
 
 // GetStatsSummary returns dummy stats for all pods known by this provider.
-func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
+func (p *SinaProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
 	var span trace.Span
 	ctx, span = trace.StartSpan(ctx, "GetStatsSummary") //nolint: ineffassign,staticcheck
 	defer span.End()
@@ -537,7 +537,7 @@ func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, err
 	return res, nil
 }
 
-func (p *MockProvider) generateMockMetrics(metricsMap map[string][]*dto.Metric, resourceType string, label []*dto.LabelPair) map[string][]*dto.Metric {
+func (p *SinaProvider) generateSinaMetrics(metricsMap map[string][]*dto.Metric, resourceType string, label []*dto.LabelPair) map[string][]*dto.Metric {
 	var (
 		cpuMetricSuffix    = "_cpu_usage_seconds_total"
 		memoryMetricSuffix = "_memory_working_set_bytes"
@@ -578,7 +578,7 @@ func (p *MockProvider) generateMockMetrics(metricsMap map[string][]*dto.Metric, 
 	return metricsMap
 }
 
-func (p *MockProvider) getMetricType(metricName string) *dto.MetricType {
+func (p *SinaProvider) getMetricType(metricName string) *dto.MetricType {
 	var (
 		dtoCounterMetricType = dto.MetricType_COUNTER
 		dtoGaugeMetricType   = dto.MetricType_GAUGE
@@ -595,7 +595,7 @@ func (p *MockProvider) getMetricType(metricName string) *dto.MetricType {
 	return nil
 }
 
-func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFamily, error) {
+func (p *SinaProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFamily, error) {
 	var span trace.Span
 	ctx, span = trace.StartSpan(ctx, "GetMetricsResource") //nolint: ineffassign,staticcheck
 	defer span.End()
@@ -612,7 +612,7 @@ func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFam
 		},
 	}
 
-	metricsMap := p.generateMockMetrics(nil, "node", nodeLabels)
+	metricsMap := p.generateSinaMetrics(nil, "node", nodeLabels)
 	for _, pod := range p.pods {
 		podLabels := []*dto.LabelPair{
 			{
@@ -624,7 +624,7 @@ func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFam
 				Value: &pod.Name,
 			},
 		}
-		metricsMap = p.generateMockMetrics(metricsMap, "pod", podLabels)
+		metricsMap = p.generateSinaMetrics(metricsMap, "pod", podLabels)
 		for _, container := range pod.Spec.Containers {
 			containerLabels := []*dto.LabelPair{
 				{
@@ -640,7 +640,7 @@ func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFam
 					Value: &container.Name,
 				},
 			}
-			metricsMap = p.generateMockMetrics(metricsMap, "container", containerLabels)
+			metricsMap = p.generateSinaMetrics(metricsMap, "container", containerLabels)
 		}
 	}
 
@@ -662,7 +662,7 @@ func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFam
 
 // NotifyPods is called to set a pod notifier callback function. This should be called before any operations are done
 // within the provider.
-func (p *MockProvider) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
+func (p *SinaProvider) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
 	p.notifier = notifier
 }
 
@@ -695,4 +695,139 @@ func addAttributes(ctx context.Context, span trace.Span, attrs ...string) contex
 		ctx = span.WithField(ctx, attrs[i], attrs[i+1])
 	}
 	return ctx
+}
+
+type SinaNodeProvider struct {
+	notify       func(*corev1.Node)
+	updateReady  chan struct{}
+	ticker_5_sec *time.Ticker
+}
+
+func (*SinaNodeProvider) Ping(ctx context.Context) error {
+	return ctx.Err()
+}
+
+// NotifyNodeStatus implements the NodeProvider interface.
+//
+// NaiveNodeProvider does not support updating node status unless created with `NewNaiveNodeProvider`
+// Otherwise this is a no-op
+func (n *SinaNodeProvider) NotifyNodeStatus(_ context.Context, f func(*corev1.Node)) {
+	n.notify = f
+	// This is a little sloppy and assumes `NotifyNodeStatus` is only called once, which is indeed currently true.
+	// The reason a channel is preferred here is so we can use a context in `UpdateStatus` to cancel waiting for this.
+	close(n.updateReady)
+}
+
+// UpdateStatus sends a node status update to the node controller
+func (n *SinaNodeProvider) UpdateStatus(ctx context.Context, node *corev1.Node) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-n.updateReady:
+	}
+	go n.updateStatus(ctx, node)
+	return nil
+}
+
+var nodes = [...]v1.Node{
+	{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "10.2.9.140",
+			Labels: map[string]string{
+				"type":                   "virtual-kubelet",
+				"kubernetes.io/role":     "agent",
+				"kubernetes.io/hostname": "10.2.9.140",
+			},
+		},
+		Status: v1.NodeStatus{
+			Phase: v1.NodePending,
+			Conditions: []v1.NodeCondition{
+				{Type: v1.NodeReady},
+				{Type: v1.NodeDiskPressure},
+				{Type: v1.NodeMemoryPressure},
+				{Type: v1.NodePIDPressure},
+				{Type: v1.NodeNetworkUnavailable},
+			},
+			Capacity: v1.ResourceList{
+				"cpu":    resource.MustParse("2"),
+				"memory": resource.MustParse("10Mi"),
+				"pods":   resource.MustParse("20"),
+			},
+		},
+	},
+	{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "10.2.9.140",
+			Labels: map[string]string{
+				"type":                   "virtual-kubelet",
+				"kubernetes.io/role":     "agent",
+				"kubernetes.io/hostname": "10.2.9.140",
+			},
+		},
+		Status: v1.NodeStatus{
+			Phase: v1.NodePending,
+			Conditions: []v1.NodeCondition{
+				{Type: v1.NodeReady},
+				{Type: v1.NodeDiskPressure},
+				{Type: v1.NodeMemoryPressure},
+				{Type: v1.NodePIDPressure},
+				{Type: v1.NodeNetworkUnavailable},
+			},
+			Capacity: v1.ResourceList{
+				"cpu":    resource.MustParse("3"),
+				"memory": resource.MustParse("30Mi"),
+				"pods":   resource.MustParse("10"),
+			},
+		},
+	},
+	{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "10.2.9.140",
+			Labels: map[string]string{
+				"type":                   "virtual-kubelet",
+				"kubernetes.io/role":     "agent",
+				"kubernetes.io/hostname": "10.2.9.140",
+			},
+		},
+		Status: v1.NodeStatus{
+			Phase: v1.NodePending,
+			Conditions: []v1.NodeCondition{
+				{Type: v1.NodeReady},
+				{Type: v1.NodeDiskPressure},
+				{Type: v1.NodeMemoryPressure},
+				{Type: v1.NodePIDPressure},
+				{Type: v1.NodeNetworkUnavailable},
+			},
+			Capacity: v1.ResourceList{
+				"cpu":    resource.MustParse("4"),
+				"memory": resource.MustParse("40Mi"),
+				"pods":   resource.MustParse("40"),
+			},
+		},
+	},
+}
+
+func (n *SinaNodeProvider) updateStatus(ctx context.Context, node *corev1.Node) error {
+	log.G(ctx).Debug("sina nodeprovider begin-------")
+	cnt := 0
+	// t := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-n.ticker_5_sec.C:
+			log.G(ctx).Info("node update:", time.Now().Format("2006-01-02 15:04:05"))
+			n.notify(node)
+
+		}
+		node = &nodes[cnt%3]
+		cnt++
+	}
+}
+
+func NewSinaNodeProvider() *SinaNodeProvider {
+	return &SinaNodeProvider{
+		updateReady:  make(chan struct{}),
+		ticker_5_sec: time.NewTicker(5 * time.Second),
+	}
 }

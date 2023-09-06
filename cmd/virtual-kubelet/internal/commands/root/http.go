@@ -32,8 +32,9 @@ type apiServerConfig struct {
 
 func getAPIConfig(c Opts) (*apiServerConfig, error) {
 	config := apiServerConfig{
-		CertPath:   os.Getenv("APISERVER_CERT_LOCATION"),
-		KeyPath:    os.Getenv("APISERVER_KEY_LOCATION"),
+		CertPath: os.Getenv("APISERVER_CERT_LOCATION"),
+		KeyPath:  os.Getenv("APISERVER_KEY_LOCATION"),
+
 		CACertPath: os.Getenv("APISERVER_CA_CERT_LOCATION"),
 	}
 

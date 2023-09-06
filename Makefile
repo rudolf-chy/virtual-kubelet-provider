@@ -22,7 +22,7 @@ gox := github.com/mitchellh/gox@v1.0.1
 
 # comment this line out for quieter things
 # V := 1 # When V is set, try to enable extra logging for debugging
-
+V := 1
 # Space separated patterns of packages to skip in list, test, format.
 IGNORED_PACKAGES := /vendor/
 
