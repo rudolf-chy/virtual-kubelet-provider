@@ -93,6 +93,11 @@ type Opts struct {
 	// StreamCreationTimeout is the maximum time for streaming connection
 	StreamCreationTimeout time.Duration
 
+	// KubeAPIQPS is the QPS to use while talking with kubernetes apiserver
+	KubeAPIQPS int32
+	// KubeAPIBurst is the burst to allow while talking with kubernetes apiserver
+	KubeAPIBurst int32
+
 	Version string
 }
 

@@ -14,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
-	"github.com/virtual-kubelet/virtual-kubelet/sina"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
@@ -356,7 +355,7 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 
 	var readyCb func(context.Context) error
 	if np == nil {
-		nnp := sina.NewSinaNodeProvider()
+		nnp := p.(node.NodeProvider)
 		np = nnp
 
 		readyCb = func(ctx context.Context) error {

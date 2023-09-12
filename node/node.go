@@ -68,6 +68,8 @@ type NodeProvider interface { //nolint:revive
 	//
 	// NotifyNodeStatus should not block callers.
 	NotifyNodeStatus(ctx context.Context, cb func(*corev1.Node))
+
+	UpdateStatus(ctx context.Context, node *corev1.Node) error
 }
 
 // NewNodeController creates a new node controller.

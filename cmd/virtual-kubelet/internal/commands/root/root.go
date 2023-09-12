@@ -17,6 +17,7 @@ package root
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -95,6 +96,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 			InternalIP:        os.Getenv("VKUBELET_POD_IP"),
 			KubeClusterDomain: c.KubeClusterDomain,
 		}
+		fmt.Println("c.ProviderConfigPath: ", c.ProviderConfigPath)
 		pInit := s.Get(c.Provider)
 		if pInit == nil {
 			return nil, nil, errors.Errorf("provider %q not found", c.Provider)
